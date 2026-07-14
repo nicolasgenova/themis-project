@@ -116,6 +116,26 @@ function linkedDescription(concept: Concept, openConcept: (concept: Concept) => 
   })
 }
 
+function inlineMarkdown(value: string) {
+  return value.split(/(\*\*.+?\*\*|__.+?__)/g).filter(Boolean).map((part, index) => {
+    const bold = (part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'))
+    return bold ? <strong key={index} className="font-bold text-slate-800">{part.slice(2, -2)}</strong> : part
+  })
+}
+
+function AiExplanation({ children }: { children: string }) {
+  const lines = children.replace(/\\([*_`])/g, '$1').split(/\r?\n/)
+  return <div className="space-y-3">{lines.map((line, index) => {
+    const text = line.trim()
+    if (!text) return null
+    const bullet = text.match(/^[-*•]\s+(.+)$/)
+    const numbered = text.match(/^(\d+)[.)]\s+(.+)$/)
+    if (bullet) return <div key={index} className="flex gap-2"><span aria-hidden className="font-bold text-teal-700">•</span><p>{inlineMarkdown(bullet[1])}</p></div>
+    if (numbered) return <div key={index} className="flex gap-2"><span className="font-bold text-teal-700">{numbered[1]}.</span><p>{inlineMarkdown(numbered[2])}</p></div>
+    return <p key={index}>{inlineMarkdown(text)}</p>
+  })}</div>
+}
+
 export default function Dicionario() {
   const { panelOpen, selectedItem, closePanel, aiBusy, setAiBusy } = useDictionary()
   const [tab, setTab] = useState<'explanation' | 'concepts'>('explanation')
@@ -163,25 +183,25 @@ export default function Dicionario() {
   }
 
   return (
-    <>
-      <aside aria-label="Dicionário" className={`fixed right-0 top-20 z-20 flex h-[calc(100vh-5rem)] w-full max-w-md flex-col border-t border-slate-200 bg-white shadow-2xl transition-transform duration-300 ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+    <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-full max-w-md">
+      <aside aria-label="Dicionário" aria-hidden={!panelOpen} className={`pointer-events-auto sticky top-20 flex h-[calc(100vh-5rem)] max-h-full w-full flex-col border-t border-slate-200 bg-white shadow-2xl transition-transform duration-300 ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div><p className="text-xs font-bold uppercase tracking-[.2em] text-teal-700">Apoio à compreensão</p><h2 className="mt-1 text-xl font-bold text-slate-900">Dicionário</h2></div>
           <button onClick={closePanel} className="rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Fechar"><XMarkIcon className="size-6" /></button>
         </div>
         <div className="grid grid-cols-2 border-b border-slate-200 px-5 pt-3">
           <button onClick={() => setTab('explanation')} className={`flex items-center justify-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ${tab === 'explanation' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500'}`}><SparklesIcon className="size-5" /> Explicação com IA</button>
-          <button onClick={() => setTab('concepts')} className={`flex items-center justify-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ${tab === 'concepts' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500'}`}><BookOpenIcon className="size-5" /> Conceitos</button>
+          <button onClick={() => setTab('concepts')} className={`flex items-center justify-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold ${tab === 'concepts' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500'}`}><BookOpenIcon className="size-5" /> Glossário</button>
         </div>
         <div className="flex-1 overflow-y-auto p-6">
           {tab === 'explanation' ? (
-            selectedItem ? <div><p className="text-sm text-slate-500">Você selecionou</p><div className="mt-3 rounded-2xl bg-teal-50 p-5"><h3 className="font-bold text-slate-900">{selectedItem.title}</h3>{selectedItem.value && <p className="mt-1 text-xl font-extrabold text-teal-700">{selectedItem.value}</p>}</div><div className="mt-6 space-y-4 text-[15px] leading-7 text-slate-600">{answeredQuestion && <div className="rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-xs font-bold uppercase tracking-wide text-violet-700">Sua pergunta</p><p className="mt-1 text-sm text-violet-950">{answeredQuestion}</p></div>}{aiStatus === 'loading' || aiBusy ? <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-4" role="status"><span className="size-5 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" /><span>A IA está respondendo. Aguarde para fazer outra pergunta.</span></div> : <p>{aiStatus === 'success' ? aiExplanation : selectedItem.explanation}</p>}{aiStatus === 'success' && !aiBusy && <p className="rounded-xl bg-violet-50 p-3 text-xs leading-5 text-violet-800">Explicação gerada por inteligência artificial. Consulte os dados oficiais em caso de dúvida.</p>}{aiStatus === 'fallback' && !aiBusy && <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">A IA não está disponível agora. Exibimos uma explicação preparada pelo sistema.</p>}{selectedItem.apiContext && <form onSubmit={askQuestion} className="border-t border-slate-200 pt-5"><label htmlFor="ai-question" className="text-sm font-bold text-slate-800">Ainda ficou com dúvida?</label><textarea id="ai-question" value={question} onChange={(event) => setQuestion(event.target.value)} disabled={aiBusy} maxLength={500} rows={3} placeholder={aiBusy ? 'Aguarde a resposta atual...' : 'Faça uma pergunta sobre este item'} className="mt-2 w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-teal-600 disabled:cursor-not-allowed disabled:bg-slate-100" /><button type="submit" disabled={aiBusy || !question.trim()} className="mt-2 w-full rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300">{aiBusy ? 'Aguarde a resposta' : 'Perguntar à IA'}</button></form>}<p className="border-t border-slate-200 pt-5 text-sm">Para entender outro item, clique em uma nova informação da tela.</p></div></div>
+            selectedItem ? <div><p className="text-sm text-slate-500">Você selecionou</p><div className="mt-3 rounded-2xl bg-teal-50 p-5"><h3 className="font-bold text-slate-900">{selectedItem.title}</h3>{selectedItem.value && <p className="mt-1 text-xl font-extrabold text-teal-700">{selectedItem.value}</p>}</div><div className="mt-6 space-y-4 text-[15px] leading-7 text-slate-600">{answeredQuestion && <div className="rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-xs font-bold uppercase tracking-wide text-violet-700">Sua pergunta</p><p className="mt-1 text-sm text-violet-950">{answeredQuestion}</p></div>}{aiStatus === 'loading' || aiBusy ? <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-4" role="status"><span className="size-5 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" /><span>A IA está respondendo. Aguarde para fazer outra pergunta.</span></div> : aiStatus === 'success' ? <AiExplanation>{aiExplanation}</AiExplanation> : <p>{selectedItem.explanation}</p>}{aiStatus === 'success' && !aiBusy && <p className="rounded-xl bg-violet-50 p-3 text-xs leading-5 text-violet-800">Explicação gerada por inteligência artificial. Consulte os dados oficiais em caso de dúvida.</p>}{aiStatus === 'fallback' && !aiBusy && <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">A IA não está disponível agora. Exibimos uma explicação preparada pelo sistema.</p>}{selectedItem.apiContext && <form onSubmit={askQuestion} className="border-t border-slate-200 pt-5"><label htmlFor="ai-question" className="text-sm font-bold text-slate-800">Ainda ficou com dúvida?</label><textarea id="ai-question" value={question} onChange={(event) => setQuestion(event.target.value)} disabled={aiBusy} maxLength={500} rows={3} placeholder={aiBusy ? 'Aguarde a resposta atual...' : 'Faça uma pergunta sobre este item'} className="mt-2 w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-teal-600 disabled:cursor-not-allowed disabled:bg-slate-100" /><button type="submit" disabled={aiBusy || !question.trim()} className="mt-2 w-full rounded-xl bg-teal-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300">{aiBusy ? 'Aguarde a resposta' : 'Perguntar à IA'}</button></form>}<p className="border-t border-slate-200 pt-5 text-sm">Para entender outro item, clique em uma nova informação da tela.</p></div></div>
             : <div className="rounded-2xl bg-teal-50 p-5"><h3 className="font-bold text-slate-900">Modo Dicionário ativado</h3><p className="mt-2 text-sm leading-6 text-slate-600">Clique em qualquer informação destacada na tela para receber uma explicação simples.</p></div>
           ) : (
             <div><label className="relative block"><MagnifyingGlassIcon className="absolute left-3 top-3 size-5 text-slate-400" /><input value={search} onChange={(e) => { setSearch(e.target.value); setActiveConcept(null) }} placeholder="Pesquisar conceito ou palavra..." className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 outline-none focus:border-teal-600" /></label>{activeConcept ? <div className="mt-6"><button onClick={() => setActiveConcept(null)} className="text-sm font-semibold text-teal-700">← Todos os conceitos</button><h3 className="mt-5 text-xl font-bold">{activeConcept.name}</h3><p className="mt-3 leading-7 text-slate-600">{linkedDescription(activeConcept, setActiveConcept)}</p><p className="mt-5 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-400">Os termos sublinhados levam a outros conceitos relacionados deste dicionário.</p></div> : <div className="mt-5"><p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{filtered.length} conceitos encontrados</p><div className="space-y-1">{filtered.map((concept) => <button key={concept.name} onClick={() => setActiveConcept(concept)} className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800"><span>{concept.name}</span><span aria-hidden>›</span></button>)}{!filtered.length && <p className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-500">Nenhum conceito encontrado. Tente pesquisar outra palavra ou selecione um item da tela para pedir uma explicação à IA.</p>}</div></div>}</div>
           )}
         </div>
       </aside>
-    </>
+    </div>
   )
 }
