@@ -5,5 +5,5 @@ import Dicionario, { DictionaryProvider } from '../../components/dicionario/dici
 import { MunicipalityProvider } from '../../data/municipalities'
 
 export default function AppIndex() {
-  return <MunicipalityProvider><DictionaryProvider><div className="flex min-h-screen flex-col bg-slate-50"><Header /><div className="relative flex flex-1 flex-col"><Outlet /><Dicionario /></div><Footer /></div></DictionaryProvider></MunicipalityProvider>
+  return <MunicipalityProvider><DictionaryProvider><div className="flex min-h-screen flex-col overflow-x-clip bg-slate-50"><Header /><div className="relative flex flex-1 flex-col overflow-x-clip"><Outlet /><Dicionario /></div><Footer /></div></DictionaryProvider></MunicipalityProvider>
 }

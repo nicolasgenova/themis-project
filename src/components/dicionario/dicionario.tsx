@@ -183,7 +183,7 @@ export default function Dicionario() {
   }
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-full max-w-md">
+    <div className={`pointer-events-none absolute inset-y-0 right-0 z-20 w-full max-w-md transition-[visibility] ${panelOpen ? 'visible' : 'invisible delay-300'}`}>
       <aside aria-label="Dicionário" aria-hidden={!panelOpen} className={`pointer-events-auto sticky top-20 flex h-[calc(100vh-5rem)] max-h-full w-full flex-col border-t border-slate-200 bg-white shadow-2xl transition-transform duration-300 ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
           <div><p className="text-xs font-bold uppercase tracking-[.2em] text-teal-700">Apoio à compreensão</p><h2 className="mt-1 text-xl font-bold text-slate-900">Dicionário</h2></div>
